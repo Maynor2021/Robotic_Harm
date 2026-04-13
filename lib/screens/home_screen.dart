@@ -1,13 +1,16 @@
 // screens/home_screen.dart
 // Pantalla principal del Brazo Robótico
 
+import 'package:brazo_robotico/services/bluetooth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/robot_state.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/robot_card.dart';
 import '../widgets/robot_slider.dart';
 import '../widgets/action_button.dart';
+import '../widgets/pinza_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-
   // Estado del robot
   final RobotState robot = RobotState();
 
@@ -89,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-
             // ---- BANNER DE EMERGENCIA (aparece solo si está activo) ----
             if (robot.emergencyActive) _buildEmergencyBanner(),
 
@@ -129,9 +130,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: robot.bluetoothConnected ? AppTheme.green : AppTheme.textSecondary,
+            color: robot.bluetoothConnected
+                ? AppTheme.green
+                : AppTheme.textSecondary,
             boxShadow: robot.bluetoothConnected
-                ? [BoxShadow(color: AppTheme.green.withOpacity(0.6), blurRadius: 6)]
+                ? [
+                    BoxShadow(
+                      color: AppTheme.green.withOpacity(0.6),
+                      blurRadius: 6,
+                    ),
+                  ]
                 : null,
           ),
         ),
@@ -140,7 +148,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           robot.bluetoothConnected ? "CONECTADO" : "OFFLINE",
           style: TextStyle(
             fontSize: 10,
-            color: robot.bluetoothConnected ? AppTheme.green : AppTheme.textSecondary,
+            color: robot.bluetoothConnected
+                ? AppTheme.green
+                : AppTheme.textSecondary,
             letterSpacing: 1,
           ),
         ),
@@ -214,14 +224,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       color: AppTheme.bgDark,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.school, color: AppTheme.cyan, size: 48),
+                    child: const Icon(
+                      Icons.school,
+                      color: AppTheme.cyan,
+                      size: 48,
+                    ),
                     // CUANDO TENGAS LA IMAGEN descomenta esto y borra el Container de arriba:
                     // child: Image.asset("assets/Ujcv.png", height: 80),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     "Mantén presionado para info",
-                    style: TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -239,34 +256,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       isAccented: true,
       child: Column(
         children: [
-          // Imagen de tenaza (abierta o cerrada)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Imagen de tenaza
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppTheme.bgCardLight,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: robot.tenazaOpen
-                        ? AppTheme.green.withOpacity(0.5)
-                        : AppTheme.red.withOpacity(0.5),
-                  ),
-                ),
-                child: Icon(
-                  // Cuando tengas imágenes reemplaza este Icon con Image.asset()
-                  robot.tenazaOpen ? Icons.front_hand : Icons.back_hand,
-                  size: 40,
-                  color: robot.tenazaOpen ? AppTheme.green : AppTheme.red,
-                ),
-                // CUANDO TENGAS IMAGEN:
-                // child: Image.asset(
-                //   robot.tenazaOpen ? "assets/tenaza_abierta.png" : "assets/tenaza_cerrada.png",
-                // ),
-              ),
+              // ✅ PINZA ANIMADA — reemplaza el Container con ícono
+              PinzaWidget(angle: robot.tenazaAngle, size: 100),
 
               // Estado y botón
               Column(
@@ -281,24 +275,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Botón Tenaza - click corto cambia estado
                   GestureDetector(
                     onTap: robot.securityEnabled
                         ? () {
                             HapticFeedback.lightImpact();
-                            setState(() => robot.tenazaOpen = !robot.tenazaOpen);
+                            setState(
+                              () => robot.tenazaOpen = !robot.tenazaOpen,
+                            );
                           }
                         : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: robot.securityEnabled
                             ? AppTheme.cyan.withOpacity(0.15)
                             : AppTheme.bgCardLight,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: robot.securityEnabled ? AppTheme.cyan : AppTheme.border,
+                          color: robot.securityEnabled
+                              ? AppTheme.cyan
+                              : AppTheme.border,
                         ),
                       ),
                       child: Text(
@@ -314,8 +314,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text("Click corto = abrir/cerrar",
-                      style: TextStyle(fontSize: 9, color: AppTheme.textSecondary)),
+                  const Text(
+                    "Click corto = abrir/cerrar",
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -365,7 +370,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Transform.rotate(
                   // Rota el ícono según el ángulo
                   angle: (robot.baseAngle / 90) * 3.14159,
-                  child: const Icon(Icons.rotate_right, size: 40, color: AppTheme.orange),
+                  child: const Icon(
+                    Icons.rotate_right,
+                    size: 40,
+                    color: AppTheme.orange,
+                  ),
                 ),
                 // CUANDO TENGAS IMAGEN:
                 // child: Transform.rotate(
@@ -385,12 +394,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       color: AppTheme.orange,
                     ),
                   ),
-                  const Text("BASE",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 2,
-                      )),
+                  const Text(
+                    "BASE",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                      letterSpacing: 2,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -426,7 +437,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             padding: EdgeInsets.only(left: 4, bottom: 8),
             child: Row(
               children: [
-                SizedBox(width: 3, height: 16,
+                SizedBox(
+                  width: 3,
+                  height: 16,
                   child: DecoratedBox(
                     decoration: BoxDecoration(color: AppTheme.green),
                   ),
@@ -446,13 +459,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             mainAxisSpacing: 12,
             childAspectRatio: 1.1,
             children: [
-
               // 1. BOTÓN SEGURIDAD
               ActionButton(
                 label: "SEGURIDAD",
                 description: "Corto: activar\nLargo: desactivar",
                 icon: robot.securityEnabled ? Icons.lock_open : Icons.lock,
-                color: robot.securityEnabled ? AppTheme.green : AppTheme.textSecondary,
+                color: robot.securityEnabled
+                    ? AppTheme.green
+                    : AppTheme.textSecondary,
                 enabled: true,
                 onTap: () {
                   // Click corto = habilita
@@ -490,24 +504,91 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 label: "BLUETOOTH",
                 description: "Largo: conectar\nal Arduino",
                 icon: Icons.bluetooth,
-                color: robot.bluetoothConnected ? AppTheme.cyan : AppTheme.textSecondary,
+                color: robot.bluetoothConnected
+                    ? AppTheme.cyan
+                    : AppTheme.textSecondary,
                 enabled: true,
                 onTap: null,
                 onLongPress: () {
-                  // TODO: implementar conexión Bluetooth real
-                  setState(() => robot.bluetoothConnected = !robot.bluetoothConnected);
-                  _showSnack(robot.bluetoothConnected
-                      ? "📡 Bluetooth conectado"
-                      : "📡 Bluetooth desconectado");
+                  final btService = bluetoothService();
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      backgroundColor: AppTheme.bgCard,
+                      title: const Text(
+                        "Buscando dispositivos...",
+                        style: TextStyle(color: AppTheme.cyan),
+                      ),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        child: StreamBuilder<List<ScanResult>>(
+                          stream: btService.getDevices(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            final devices = snapshot.data!;
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: devices.length,
+                              itemBuilder: (context, index) {
+                                final device = devices[index].device;
+                                return ListTile(
+                                  leading: const Icon(
+                                    Icons.bluetooth,
+                                    color: AppTheme.cyan,
+                                  ),
+                                  title: Text(
+                                    device.platformName.isEmpty
+                                        ? "Desconocido"
+                                        : device.platformName,
+                                    style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    device.remoteId.toString(),
+                                    style: const TextStyle(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                  onTap: () async {
+                                    Navigator.pop(context);
+                                    bool ok = await btService.connectToDevice(
+                                      device,
+                                    );
+                                    setState(
+                                      () => robot.bluetoothConnected = ok,
+                                    );
+                                    _showSnack(
+                                      ok
+                                          ? "✅ Conectado"
+                                          : "❌ Error al conectar",
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
                 },
               ),
+
+              // 4. BOTÓN MICRÓFONO
 
               // 4. BOTÓN MICRÓFONO
               ActionButton(
                 label: "MICRÓFONO",
                 description: "Corto: instrucciones\nLargo: control voz",
                 icon: robot.isVoiceActive ? Icons.mic : Icons.mic_none,
-                color: robot.isVoiceActive ? AppTheme.green : AppTheme.textSecondary,
+                color: robot.isVoiceActive
+                    ? AppTheme.green
+                    : AppTheme.textSecondary,
                 enabled: robot.securityEnabled,
                 onTap: () {
                   // Click corto = muestra instrucciones
@@ -516,9 +597,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 onLongPress: () {
                   // Click largo = activa control por voz
                   setState(() => robot.isVoiceActive = !robot.isVoiceActive);
-                  _showSnack(robot.isVoiceActive
-                      ? "🎤 Control por voz activado"
-                      : "🎤 Control por voz desactivado");
+                  _showSnack(
+                    robot.isVoiceActive
+                        ? "🎤 Control por voz activado"
+                        : "🎤 Control por voz desactivado",
+                  );
                 },
               ),
             ],
@@ -549,12 +632,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   : AppTheme.bgCardLight,
               shape: BoxShape.circle,
               border: Border.all(
-                color: robot.bluetoothConnected ? AppTheme.cyan : AppTheme.border,
+                color: robot.bluetoothConnected
+                    ? AppTheme.cyan
+                    : AppTheme.border,
               ),
             ),
             child: Icon(
               Icons.bluetooth,
-              color: robot.bluetoothConnected ? AppTheme.cyan : AppTheme.textSecondary,
+              color: robot.bluetoothConnected
+                  ? AppTheme.cyan
+                  : AppTheme.textSecondary,
               size: 24,
             ),
           ),
@@ -564,7 +651,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  robot.bluetoothConnected ? "Arduino Conectado" : "Sin conexión",
+                  robot.bluetoothConnected
+                      ? "Arduino Conectado"
+                      : "Sin conexión",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: robot.bluetoothConnected
@@ -576,7 +665,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   robot.bluetoothConnected
                       ? "Mantén presionado BT para desconectar"
                       : "Mantén presionado BT para conectar",
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -628,24 +720,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // child: Image.asset("assets/Ujcv_logo.png", height: 80),
             ),
             const SizedBox(height: 16),
-            const Text("Brazo Robótico Arduino",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.cyan,
-                )),
+            const Text(
+              "Brazo Robótico Arduino",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.cyan,
+              ),
+            ),
             const SizedBox(height: 8),
-            const Text("Creado por",
-                style: TextStyle(color: AppTheme.textSecondary)),
+            const Text(
+              "Creado por",
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
             const SizedBox(height: 4),
-            const Text("Clase Electrónica Digital",
-                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+            const Text(
+              "Clase Electrónica Digital",
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 4),
-            const Text("UJCV",
-                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+            const Text(
+              "UJCV",
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
-            const Text("2026",
-                style: TextStyle(color: AppTheme.textSecondary)),
+            const Text("2026", style: TextStyle(color: AppTheme.textSecondary)),
           ],
         ),
         actions: [
@@ -672,35 +777,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             Icon(Icons.mic, color: AppTheme.green),
             SizedBox(width: 8),
-            Text("Control por Voz",
-                style: TextStyle(color: AppTheme.green, fontSize: 16)),
+            Text(
+              "Control por Voz",
+              style: TextStyle(color: AppTheme.green, fontSize: 16),
+            ),
           ],
         ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Comandos disponibles:",
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+            Text(
+              "Comandos disponibles:",
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
             SizedBox(height: 12),
-            _VoiceCommand(command: "\"abrir tenaza\"", action: "Abre la tenaza"),
-            _VoiceCommand(command: "\"cerrar tenaza\"", action: "Cierra la tenaza"),
-            _VoiceCommand(command: "\"base izquierda\"", action: "Gira base a 0°"),
+            _VoiceCommand(
+              command: "\"abrir tenaza\"",
+              action: "Abre la tenaza",
+            ),
+            _VoiceCommand(
+              command: "\"cerrar tenaza\"",
+              action: "Cierra la tenaza",
+            ),
+            _VoiceCommand(
+              command: "\"base izquierda\"",
+              action: "Gira base a 0°",
+            ),
             _VoiceCommand(command: "\"base centro\"", action: "Base a 45°"),
-            _VoiceCommand(command: "\"base derecha\"", action: "Gira base a 90°"),
-            _VoiceCommand(command: "\"emergencia\"", action: "Activa emergencia"),
+            _VoiceCommand(
+              command: "\"base derecha\"",
+              action: "Gira base a 90°",
+            ),
+            _VoiceCommand(
+              command: "\"emergencia\"",
+              action: "Activa emergencia",
+            ),
             _VoiceCommand(command: "\"detener\"", action: "Para todo"),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Entendido", style: TextStyle(color: AppTheme.green)),
+            child: const Text(
+              "Entendido",
+              style: TextStyle(color: AppTheme.green),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+extension on Future<List<BluetoothDevice>> {
+  int? get length => null;
 }
 
 // Widget auxiliar para cada comando de voz en el dialog
@@ -718,12 +849,19 @@ class _VoiceCommand extends StatelessWidget {
         children: [
           const Icon(Icons.arrow_right, color: AppTheme.green, size: 16),
           const SizedBox(width: 4),
-          Text(command,
-              style: const TextStyle(
-                  color: AppTheme.cyan, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(
+            command,
+            style: const TextStyle(
+              color: AppTheme.cyan,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(width: 8),
-          Text("→ $action",
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          Text(
+            "→ $action",
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          ),
         ],
       ),
     );
