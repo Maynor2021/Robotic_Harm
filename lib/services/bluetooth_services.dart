@@ -2,17 +2,24 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class bluetoothService 
 {
  BluetoothDevice? _device;
   BluetoothCharacteristic? _characteristic;
+  // 1 escanear los dispositivos
+  
+    Stream<List<ScanResult>> getDevices() async* {
+      // Pedir permisos primero
+      await Permission.bluetoothScan.request();
+      await Permission.bluetoothConnect.request();
+      await Permission.location.request();
 
-   // 1. OBTENER dispositivos escaneados
-  Stream<List<ScanResult>> getDevices() {
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-    return FlutterBluePlus.scanResults;
-  }
+      // Luego escanear
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
+      yield* FlutterBluePlus.scanResults;
+    }
 
   // 2. CONECTAR
   Future<bool> connectToDevice(BluetoothDevice device) async {
