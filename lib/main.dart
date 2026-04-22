@@ -1,9 +1,6 @@
-import 'package:brazo_robotico/screens/MainScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/home_screen.dart';
 import 'screens/MainScreen.dart';
-import 'screens/nav_barscreen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

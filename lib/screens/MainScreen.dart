@@ -19,7 +19,7 @@ class _MainScreenState extends State<MainScreen>
   final List<Widget> _screens = const [
     HomeScreen(),
     ConfigScreen(),
-    AboutDialog(),
+    AboutScreen(),
     
     
   ];

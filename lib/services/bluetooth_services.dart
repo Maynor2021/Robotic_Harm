@@ -1,62 +1,62 @@
-import 'dart:convert';
-import 'dart:typed_data';
+// services/bluetooth_services.dart
+import 'package:flutter_bluetooth_classic_serial/flutter_bluetooth_classic.dart';
 
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
+class BluetoothService {
+  final FlutterBluetoothClassic _bluetooth = FlutterBluetoothClassic();
 
-class bluetoothService 
-{
- BluetoothDevice? _device;
-  BluetoothCharacteristic? _characteristic;
-  // 1 escanear los dispositivos
-  
-    Stream<List<ScanResult>> getDevices() async* {
-      // Pedir permisos primero
-      await Permission.bluetoothScan.request();
-      await Permission.bluetoothConnect.request();
-      await Permission.location.request();
-
-      // Luego escanear
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-      yield* FlutterBluePlus.scanResults;
-    }
-
-  // 2. CONECTAR
-  Future<bool> connectToDevice(BluetoothDevice device) async {
+  // Verifica si Bluetooth está encendido
+  Future<bool> isEnabled() async {
     try {
-      await device.connect();
-      _device = device;
-
-      // Buscar característica para escribir
-      List<BluetoothService> services = await device.discoverServices();
-      for (var service in services) {
-        for (var c in service.characteristics) {
-          if (c.properties.write) {
-            _characteristic = c;
-          }
-        }
-      }
-      return true;
-    } catch (e) {
-      print('Error al conectar: $e');
+      return await _bluetooth.isBluetoothEnabled();
+    } catch (_) {
       return false;
     }
   }
 
-  // 3. ENVIAR datos al Arduino
-  Future<void> sendData(String data) async {
-    if (_characteristic != null) {
-      await _characteristic!.write(utf8.encode(data));
+  // Devuelve los dispositivos YA emparejados (ahí debe estar el HC-05)
+  Future<List<BluetoothDevice>> getPairedDevices() async {
+    try {
+      return await _bluetooth.getPairedDevices();
+    } catch (e) {
+      return [];
     }
   }
 
-  // 4. VERIFICAR conexión
-  bool get isConnected => _device != null;
-
-  // 5. DESCONECTAR
-  Future<void> disconnect() async {
-    await _device?.disconnect();
-    _device = null;
-    _characteristic = null;
+  // Conecta al HC-05 por su MAC address
+  Future<bool> connectToDevice(BluetoothDevice device) async {
+    try {
+      return await _bluetooth.connect(device.address);
+    } catch (e) {
+      return false;
+    }
   }
+
+  // Desconecta
+  Future<bool> disconnect() async {
+    try {
+      return await _bluetooth.disconnect();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Envía un string al Arduino (ej: "T1", "B45", "E")
+  Future<bool> sendCommand(String message) async {
+    try {
+      return await _bluetooth.sendString(message);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Stream de datos entrantes desde el Arduino
+  Stream<BluetoothData> get onDataReceived => _bluetooth.onDataReceived;
+
+  // Stream de cambios en la conexión
+  Stream<BluetoothConnectionState> get onConnectionChanged =>
+      _bluetooth.onConnectionChanged;
 }
+
+// Instancia global (singleton sencillo) para usar desde cualquier pantalla
+final _service = BluetoothService();
+BluetoothService bluetoothService() => _service;

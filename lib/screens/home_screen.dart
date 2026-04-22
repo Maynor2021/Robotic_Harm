@@ -1,16 +1,17 @@
 // screens/home_screen.dart
 // Pantalla principal del Brazo Robótico
 
-import 'package:brazo_robotico/services/bluetooth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/robot_state.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/robot_card.dart';
 import '../widgets/robot_slider.dart';
 import '../widgets/action_button.dart';
 import '../widgets/pinza_widget.dart';
+import 'package:brazo_robotico/services/bluetooth_services.dart';
+import 'package:flutter_bluetooth_classic_serial/flutter_bluetooth_classic.dart'
+    show BluetoothDevice; // solo necesitamos el tipo
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -259,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // ✅ PINZA ANIMADA — reemplaza el Container con ícono
+              // PINZA ANIMADA — reemplaza el Container con ícono
               PinzaWidget(angle: robot.tenazaAngle, size: 100),
 
               // Estado y botón
@@ -279,9 +280,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onTap: robot.securityEnabled
                         ? () {
                             HapticFeedback.lightImpact();
-                            setState(
-                              () => robot.tenazaOpen = !robot.tenazaOpen,
-                            );
+                            setState(() {
+                              robot.tenazaOpen = !robot.tenazaOpen;
+                              robot.tenazaAngle = robot.tenazaOpen ? 0 : 90;
+                            });
+                            String command = robot.tenazaOpen
+                                ? "T90\n"
+                                : "T0\n";
+
+                            if (robot.bluetoothConnected) {
+                              bluetoothService().sendCommand(command);
+                            }
+
+                            _showSnack(
+                              "📡 Enviado: $command",
+                            ); // 👈 aparece abajo
+                            print(command); // también en consola, por si acaso
                           }
                         : null,
                     child: AnimatedContainer(
@@ -340,6 +354,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               setState(() {
                 robot.tenazaAngle = value;
                 robot.tenazaOpen = value < 45;
+                bluetoothService().sendCommand(
+                  "T${value.toInt()}\n",
+                ); // Ejemplo: "T45\n"
               });
             },
           ),
@@ -462,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // 1. BOTÓN SEGURIDAD
               ActionButton(
                 label: "SEGURIDAD",
-                description: "Corto: activar\nLargo: desactivar",
+                description: "Corto: Desactivar\nLargo: Activar",
                 icon: robot.securityEnabled ? Icons.lock_open : Icons.lock,
                 color: robot.securityEnabled
                     ? AppTheme.green
@@ -483,7 +500,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // 2. BOTÓN EMERGENCIA
               ActionButton(
                 label: "EMERGENCIA",
-                description: "Largo: activar\nCorto: desactivar",
+                description: "Largo: Desactivar\nCorto: Activar",
                 icon: Icons.warning_rounded,
                 color: robot.emergencyActive ? AppTheme.red : AppTheme.orange,
                 enabled: true,
@@ -509,77 +526,105 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     : AppTheme.textSecondary,
                 enabled: true,
                 onTap: null,
-                onLongPress: () {
+                onLongPress: () async {
                   final btService = bluetoothService();
+                  final devices = await btService.getPairedDevices();
+
+                  // 1. Verifica que el Bluetooth esté encendido
+                  if (!await btService.isEnabled()) {
+                    _showSnack("⚠️ Activá el Bluetooth primero");
+                    return;
+                  }
+                  if (!mounted) return;
+
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
                       backgroundColor: AppTheme.bgCard,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppTheme.cyan, width: 1),
+                      ),
                       title: const Text(
-                        "Buscando dispositivos...",
+                        "Dispositivos emparejados",
                         style: TextStyle(color: AppTheme.cyan),
                       ),
+
                       content: SizedBox(
                         width: double.maxFinite,
-                        child: StreamBuilder<List<ScanResult>>(
-                          stream: btService.getDevices(),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            final devices = snapshot.data!;
-                            return ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: devices.length,
-                              itemBuilder: (context, index) {
-                                final device = devices[index].device;
-                                return ListTile(
-                                  leading: const Icon(
-                                    Icons.bluetooth,
-                                    color: AppTheme.cyan,
+                        child: devices.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Text(
+                                  "No hay dispositivos emparejados.\n\n"
+                                  "Emparejá el HC-05 desde\nConfiguración → Bluetooth\n"
+                                  "(PIN normal: 1234 o 0000)",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
                                   ),
-                                  title: Text(
-                                    device.platformName.isEmpty
-                                        ? "Desconocido"
-                                        : device.platformName,
-                                    style: const TextStyle(
-                                      color: AppTheme.textPrimary,
+                                ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: devices.length,
+                                itemBuilder: (context, index) {
+                                  final device = devices[index];
+                                  return ListTile(
+                                    leading: const Icon(
+                                      Icons.bluetooth,
+                                      color: AppTheme.cyan,
                                     ),
-                                  ),
-                                  subtitle: Text(
-                                    device.remoteId.toString(),
-                                    style: const TextStyle(
-                                      color: AppTheme.textSecondary,
+                                    title: Text(
+                                      device.name.isEmpty
+                                          ? "Desconocido"
+                                          : device.name,
+                                      style: const TextStyle(
+                                        color: AppTheme.textPrimary,
+                                      ),
                                     ),
-                                  ),
-                                  onTap: () async {
-                                    Navigator.pop(context);
-                                    bool ok = await btService.connectToDevice(
-                                      device,
-                                    );
-                                    setState(
-                                      () => robot.bluetoothConnected = ok,
-                                    );
-                                    _showSnack(
-                                      ok
-                                          ? "✅ Conectado"
-                                          : "❌ Error al conectar",
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
+
+                                    subtitle: Text(
+                                      device.address,
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      _showSnack(
+                                        "🔄 Conectando a ${device.name}...",
+                                      );
+                                      final ok = await btService
+                                          .connectToDevice(device);
+                                      if (!mounted) return;
+                                      setState(
+                                        () => robot.bluetoothConnected = ok,
+                                      );
+                                      _showSnack(
+                                        ok
+                                            ? "✅ Conectado a ${device.name}"
+                                            : "❌ Error al conectar",
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                       ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            "Cerrar",
+                            style: TextStyle(color: AppTheme.cyan),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
               ),
-
-              // 4. BOTÓN MICRÓFONO
 
               // 4. BOTÓN MICRÓFONO
               ActionButton(
@@ -730,7 +775,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Creado por",
+              "Versión 1.0",
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const Text(
+              "Creado por "
+              "Maynor Rodriguez\n",
               style: TextStyle(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 4),
@@ -828,10 +881,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-}
-
-extension on Future<List<BluetoothDevice>> {
-  int? get length => null;
 }
 
 // Widget auxiliar para cada comando de voz en el dialog

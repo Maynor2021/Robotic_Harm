@@ -5,8 +5,8 @@
 import FlutterMacOS
 import Foundation
 
-import flutter_blue_plus_darwin
+import flutter_bluetooth_classic_serial
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  FlutterBluePlusPlugin.register(with: registry.registrar(forPlugin: "FlutterBluePlusPlugin"))
+  SwiftFlutterBluetoothClassicPlugin.register(with: registry.registrar(forPlugin: "SwiftFlutterBluetoothClassicPlugin"))
 }
