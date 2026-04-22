@@ -1,5 +1,7 @@
 // screens/home_screen.dart
 // Pantalla principal del Brazo Robótico
+import 'package:brazo_robotico/services/commands.dart';
+import 'package:brazo_robotico/services/voice_command.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +12,9 @@ import '../widgets/robot_slider.dart';
 import '../widgets/action_button.dart';
 import '../widgets/pinza_widget.dart';
 import 'package:brazo_robotico/services/bluetooth_services.dart';
+import 'package:brazo_robotico/services/voice_command.dart ';
 import 'package:flutter_bluetooth_classic_serial/flutter_bluetooth_classic.dart'
+
     show BluetoothDevice; // solo necesitamos el tipo
 
 class HomeScreen extends StatefulWidget {
@@ -23,6 +27,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // Estado del robot
   final RobotState robot = RobotState();
+  final BluetoothService _bluetoothService = BluetoothService();
+  late ProcesarComando _comando;
+
+   @override
+
+  
+
 
   // Controladores de animación para el botón de emergencia
   late AnimationController _emergencyController;
@@ -32,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     // Animación pulsante para el botón de emergencia activo
+    _comando = ProcesarComando(robot: robot, onSetState: setState); 
     _emergencyController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -636,17 +648,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     : AppTheme.textSecondary,
                 enabled: robot.securityEnabled,
                 onTap: () {
+                  
                   // Click corto = muestra instrucciones
                   _showVoiceInstructions();
                 },
+               
                 onLongPress: () {
-                  // Click largo = activa control por voz
-                  setState(() => robot.isVoiceActive = !robot.isVoiceActive);
-                  _showSnack(
-                    robot.isVoiceActive
-                        ? "🎤 Control por voz activado"
-                        : "🎤 Control por voz desactivado",
-                  );
+  setState(() => robot.isVoiceActive = !robot.isVoiceActive);
+  
+                  if (robot.isVoiceActive) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        backgroundColor: AppTheme.bgCard,
+                        title: const Text("Control por Voz", style: TextStyle(color: AppTheme.green)),
+                        content: VoiceController(
+                          onComando: (texto) {
+                            _comando.ejecutarComando(texto);
+                            Navigator.pop(context); // cierra el dialog después del comando
+                          },
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              setState(() => robot.isVoiceActive = false);
+                              Navigator.pop(context);
+                            },
+                            child: const Text("Cerrar", style: TextStyle(color: AppTheme.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
                 },
               ),
             ],
@@ -655,7 +688,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
+  
   // Sección inferior con estado de conexión
   Widget _buildConnectionSection() {
     return Container(
@@ -848,6 +881,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _VoiceCommand(
               command: "\"abrir tenaza\"",
               action: "Abre la tenaza",
+          
             ),
             _VoiceCommand(
               command: "\"cerrar tenaza\"",
@@ -880,6 +914,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  _procesarComandoVoz(String p1) {
+    _comando.ejecutarComando( p1);
+
   }
 }
 
