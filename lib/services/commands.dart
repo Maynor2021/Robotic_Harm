@@ -6,7 +6,6 @@ class ProcesarComando {
   final RobotState robot;
   final Function(void Function()) onSetState;
 
-  // Lista solo para comparar
   final List<String> comandos = [
     'mover brazo arriba',
     'mover brazo abajo',
@@ -32,42 +31,53 @@ class ProcesarComando {
 
     switch (texto) {
       case 'mover brazo arriba':
-        _bluetoothService.sendCommand('T1');
+        _bluetoothService.sendCommand('B90');
         onSetState(() => robot.baseAngle = 90);
         break;
+
       case 'mover brazo abajo':
-        _bluetoothService.sendCommand('B1');
+        _bluetoothService.sendCommand('B0');
         onSetState(() => robot.baseAngle = 0);
         break;
+
       case 'mover brazo izquierda':
-        _bluetoothService.sendCommand('L1');
+        _bluetoothService.sendCommand('B0');
+        onSetState(() => robot.baseAngle = 0);
         break;
+
       case 'mover brazo derecha':
-        _bluetoothService.sendCommand('R1');
+        _bluetoothService.sendCommand('B90');
+        onSetState(() => robot.baseAngle = 90);
         break;
+
       case 'abrir pinza':
-        _bluetoothService.sendCommand('O1');
+        _bluetoothService.sendCommand('T0');
         onSetState(() => robot.tenazaAngle = 0);
         break;
+
       case 'cerrar pinza':
-        _bluetoothService.sendCommand('C1');
+        _bluetoothService.sendCommand('T90');
         onSetState(() => robot.tenazaAngle = 90);
         break;
+
       case 'emergencia':
-        _bluetoothService.sendCommand('E');
-        onSetState(() => robot.emergencyActive = true);
+        _bluetoothService.sendCommand('E1');
+        onSetState(() => robot.activateEmergency());
         break;
+
       case 'activar seguridad':
         _bluetoothService.sendCommand('S1');
         onSetState(() => robot.securityEnabled = true);
         break;
+
       case 'desactivar seguridad':
         _bluetoothService.sendCommand('S0');
         onSetState(() => robot.securityEnabled = false);
         break;
+
       case 'desactivar emergencia':
-        _bluetoothService.sendCommand('D0');
-        onSetState(() => robot.emergencyActive = false);
+        _bluetoothService.sendCommand('E0');
+        onSetState(() => robot.deactivateEmergency());
         break;
     }
   }

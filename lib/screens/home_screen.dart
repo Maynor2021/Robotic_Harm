@@ -12,9 +12,9 @@ import '../widgets/robot_slider.dart';
 import '../widgets/action_button.dart';
 import '../widgets/pinza_widget.dart';
 import 'package:brazo_robotico/services/bluetooth_services.dart';
-import 'package:brazo_robotico/services/voice_command.dart ';
+import 'package:brazo_robotico/services/voice_command.dart '
+    hide VoiceController;
 import 'package:flutter_bluetooth_classic_serial/flutter_bluetooth_classic.dart'
-
     show BluetoothDevice; // solo necesitamos el tipo
 
 class HomeScreen extends StatefulWidget {
@@ -30,11 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final BluetoothService _bluetoothService = BluetoothService();
   late ProcesarComando _comando;
 
-   @override
-
-  
-
-
+  @override
   // Controladores de animación para el botón de emergencia
   late AnimationController _emergencyController;
   late Animation<double> _emergencyPulse;
@@ -43,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     // Animación pulsante para el botón de emergencia activo
-    _comando = ProcesarComando(robot: robot, onSetState: setState); 
+    _comando = ProcesarComando(robot: robot, onSetState: setState);
     _emergencyController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -229,22 +225,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               child: Column(
                 children: [
-                  // Aquí va tu imagen - por ahora muestra placeholder
-                  Container(
-                    height: 80,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: AppTheme.bgDark,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.school,
-                      color: AppTheme.cyan,
-                      size: 48,
-                    ),
-                    // CUANDO TENGAS LA IMAGEN descomenta esto y borra el Container de arriba:
-                    // child: Image.asset("assets/Ujcv.png", height: 80),
-                  ),
+                  Image.asset("assets/Ujcv.png", height: 80),
                   const SizedBox(height: 8),
                   const Text(
                     "Mantén presionado para info",
@@ -296,9 +277,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               robot.tenazaOpen = !robot.tenazaOpen;
                               robot.tenazaAngle = robot.tenazaOpen ? 0 : 90;
                             });
-                            String command = robot.tenazaOpen
-                                ? "T90\n"
-                                : "T0\n";
+                            String command = robot.tenazaOpen ? "A\n" : "C\n";
 
                             if (robot.bluetoothConnected) {
                               bluetoothService().sendCommand(command);
@@ -447,6 +426,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             color: AppTheme.orange,
             onChanged: (value) {
               setState(() => robot.baseAngle = value);
+              String comando = "B${value.toInt()}\n";
+              _showSnack(
+                "Mandando: $comando",
+              ); // ← verás el comando en pantalla
+              bluetoothService().sendCommand(comando);
             },
           ),
         ],
@@ -509,22 +493,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 },
               ),
 
-              // 2. BOTÓN EMERGENCIA
+              /// 2. BOTÓN EMERGENCIA
               ActionButton(
                 label: "EMERGENCIA",
-                description: "Largo: Desactivar\nCorto: Activar",
+                description: "Corto: Activar\nLargo: Desactivar",
                 icon: Icons.warning_rounded,
                 color: robot.emergencyActive ? AppTheme.red : AppTheme.orange,
                 enabled: true,
                 onTap: () {
-                  // Click corto = desactiva emergencia
-                  setState(() => robot.deactivateEmergency());
-                  _showSnack("✅ Emergencia desactivada");
+                  // Click corto = activa emergencia
+                  setState(() => robot.activateEmergency());
+                  _bluetoothService.sendCommand('E1');
+                  _showSnack("🚨 EMERGENCIA ACTIVADA");
                 },
                 onLongPress: () {
-                  // Click largo = activa emergencia
-                  setState(() => robot.activateEmergency());
-                  _showSnack("🚨 EMERGENCIA ACTIVADA");
+                  // Click largo = desactiva emergencia
+                  setState(() => robot.deactivateEmergency());
+                  _bluetoothService.sendCommand('E0');
+                  _showSnack("✅ Emergencia desactivada");
                 },
               ),
 
@@ -648,24 +634,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     : AppTheme.textSecondary,
                 enabled: robot.securityEnabled,
                 onTap: () {
-                  
                   // Click corto = muestra instrucciones
                   _showVoiceInstructions();
                 },
-               
+
                 onLongPress: () {
-  setState(() => robot.isVoiceActive = !robot.isVoiceActive);
-  
+                  setState(() => robot.isVoiceActive = !robot.isVoiceActive);
+
                   if (robot.isVoiceActive) {
                     showDialog(
                       context: context,
                       builder: (_) => AlertDialog(
                         backgroundColor: AppTheme.bgCard,
-                        title: const Text("Control por Voz", style: TextStyle(color: AppTheme.green)),
+                        title: const Text(
+                          "Control por Voz",
+                          style: TextStyle(color: AppTheme.green),
+                        ),
                         content: VoiceController(
                           onComando: (texto) {
                             _comando.ejecutarComando(texto);
-                            Navigator.pop(context); // cierra el dialog después del comando
+                            // cierra el dialog después del comando
                           },
                         ),
                         actions: [
@@ -674,7 +662,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               setState(() => robot.isVoiceActive = false);
                               Navigator.pop(context);
                             },
-                            child: const Text("Cerrar", style: TextStyle(color: AppTheme.red)),
+                            child: const Text(
+                              "Cerrar",
+                              style: TextStyle(color: AppTheme.red),
+                            ),
                           ),
                         ],
                       ),
@@ -688,7 +679,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-  
+
   // Sección inferior con estado de conexión
   Widget _buildConnectionSection() {
     return Container(
@@ -759,6 +750,82 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // =========================================================
   // MÉTODOS (funciones)
   // =========================================================
+  void _showVoiceInstructions() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppTheme.green, width: 1),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.mic, color: AppTheme.green),
+            SizedBox(width: 8),
+            Text(
+              "Control por Voz",
+              style: TextStyle(color: AppTheme.green, fontSize: 16),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Comandos disponibles:",
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
+            SizedBox(height: 12),
+            _VoiceCommand(
+              command: "\"mover brazo arriba\"",
+              action: "Base a 90°",
+            ),
+            _VoiceCommand(
+              command: "\"mover brazo abajo\"",
+              action: "Base a 0°",
+            ),
+            _VoiceCommand(
+              command: "\"mover brazo izquierda\"",
+              action: "Gira izquierda",
+            ),
+            _VoiceCommand(
+              command: "\"mover brazo derecha\"",
+              action: "Gira derecha",
+            ),
+            _VoiceCommand(command: "\"abrir pinza\"", action: "Tenaza a 0°"),
+            _VoiceCommand(command: "\"cerrar pinza\"", action: "Tenaza a 90°"),
+            _VoiceCommand(
+              command: "\"emergencia\"",
+              action: "Activa emergencia",
+            ),
+            _VoiceCommand(
+              command: "\"activar seguridad\"",
+              action: "Habilita sistema",
+            ),
+            _VoiceCommand(
+              command: "\"desactivar seguridad\"",
+              action: "Deshabilita sistema",
+            ),
+            _VoiceCommand(
+              command: "\"desactivar emergencia\"",
+              action: "Cancela emergencia",
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "Entendido",
+              style: TextStyle(color: AppTheme.green),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Muestra un Snackbar (mensajito abajo de la pantalla)
   void _showSnack(String message) {
@@ -793,7 +860,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: AppTheme.bgDark,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.school, color: AppTheme.cyan, size: 48),
+              child: Image.asset("assets/ujcvLogo_.png", height: 50),
               // CUANDO TENGAS IMAGEN:
               // child: Image.asset("assets/Ujcv_logo.png", height: 80),
             ),
@@ -809,10 +876,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             const SizedBox(height: 8),
             const Text(
               "Versión 1.0",
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const Text(
               "Creado por "
@@ -850,75 +914,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // Dialog de instrucciones de control por voz
-  void _showVoiceInstructions() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppTheme.green, width: 1),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.mic, color: AppTheme.green),
-            SizedBox(width: 8),
-            Text(
-              "Control por Voz",
-              style: TextStyle(color: AppTheme.green, fontSize: 16),
-            ),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Comandos disponibles:",
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-            ),
-            SizedBox(height: 12),
-            _VoiceCommand(
-              command: "\"abrir tenaza\"",
-              action: "Abre la tenaza",
-          
-            ),
-            _VoiceCommand(
-              command: "\"cerrar tenaza\"",
-              action: "Cierra la tenaza",
-            ),
-            _VoiceCommand(
-              command: "\"base izquierda\"",
-              action: "Gira base a 0°",
-            ),
-            _VoiceCommand(command: "\"base centro\"", action: "Base a 45°"),
-            _VoiceCommand(
-              command: "\"base derecha\"",
-              action: "Gira base a 90°",
-            ),
-            _VoiceCommand(
-              command: "\"emergencia\"",
-              action: "Activa emergencia",
-            ),
-            _VoiceCommand(command: "\"detener\"", action: "Para todo"),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "Entendido",
-              style: TextStyle(color: AppTheme.green),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   _procesarComandoVoz(String p1) {
-    _comando.ejecutarComando( p1);
-
+    _comando.ejecutarComando(p1);
   }
 }
 

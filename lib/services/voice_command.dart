@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-class VoiceController  extends StatefulWidget {
-  final Function(String) onComando; // Callback para enviar el comando a HomeScreen
+class VoiceController extends StatefulWidget {
+  final Function(String)
+  onComando; // Callback para enviar el comando a HomeScreen
 
   const VoiceController({Key? key, required this.onComando}) : super(key: key);
 
@@ -15,20 +16,28 @@ class _VoiceControllerState extends State<VoiceController> {
   bool _isListening = false;
   String _recognizedText = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _speech.initialize();
-  }
+ @override
+void initState() {
+  super.initState();
+  _speech.initialize(
+    onStatus: (status) => print('Status: $status'),
+    onError: (error) => print('Error: $error'),
+  );
+}
 
   Future<void> _startListening() async {
     bool disponible = await _speech.initialize();
     if (disponible) {
       setState(() => _isListening = true);
       _speech.listen(
+        localeId: 'es_ES', // Asegúrate de usar el locale correcto para español
         onResult: (result) {
           setState(() => _recognizedText = result.recognizedWords);
-          widget.onComando(result.recognizedWords); // Manda el texto a HomeScreen
+
+          // Solo manda el comando cuando el resultado es FINAL
+          if (result.finalResult) {
+            widget.onComando(result.recognizedWords);
+          }
         },
       );
     }
